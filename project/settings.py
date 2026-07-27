@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from decouple import config
 
 SECRET_KEY = config("SECRET_KEY")
@@ -15,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "users",
     "api",
 ]
@@ -80,3 +82,4 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+AUTH_USER_MODEL = "users.User"
