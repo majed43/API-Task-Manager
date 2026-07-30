@@ -1,5 +1,6 @@
 import uuid
 
+from api.models import Project
 from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
