@@ -34,9 +34,16 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ("id", "title", "category", ...)
+        fields = (
+            "id",
+            "title",
+            "category",
+            "owner",
+            "participants",
+            "created_at",
+            "updated_at",
+        )
 
-    # تقييد الحقول التي يمكن للمشروع ان ينتمي لها
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
@@ -44,12 +51,15 @@ class ProjectSerializer(serializers.ModelSerializer):
             self.fields["category"].queryset = Category.objects.filter(
                 owner=request.user
             )
+            if request.method in ("PUT", "PATCH"):
+                self.fields["category"].read_only = True
+                self.fields["category"].required = False
 
     def validate_participants(self, value):
         request = self.context.get("request")
-        if request and request.user in value:
+        if request and request.method in ("PUT", "PATCH") and request.user not in value:
             raise serializers.ValidationError(
-                "The owner cannot be a participant in their own project"
+                "The owner must be included in the participants list."
             )
         return value
 
@@ -75,7 +85,6 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # fixed: restrict project choices to ones the user participates in
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             self.fields["project"].queryset = request.user.participating_projects.all()
@@ -88,7 +97,6 @@ class TaskSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        # fixed: use .get() so PATCH requests (partial data) don't crash
         project = data.get("project") or getattr(self.instance, "project", None)
         assigned_to = data.get("assigned_to") or getattr(
             self.instance, "assigned_to", None

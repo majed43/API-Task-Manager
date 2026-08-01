@@ -38,11 +38,13 @@ class Project(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="owned_projects",
+        editable=False,
     )
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name="participating_projects",
         blank=True,
+        null=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
