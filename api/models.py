@@ -79,6 +79,7 @@ class Task(models.Model):
     )
     hex_color = models.CharField(
         max_length=7,
+        default="#FFFFFF",
         null=True,
         blank=True,
     )

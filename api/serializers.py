@@ -65,10 +65,17 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    hex_color = serializers.CharField(validators=[hex_color_validator])
+
+    hex_color = serializers.CharField(
+        validators=[hex_color_validator],
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
 
     class Meta:
         model = Task
+
         fields = (
             "id",
             "title",
@@ -87,12 +94,17 @@ class TaskSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
         if request and request.user.is_authenticated:
-            self.fields["project"].queryset = request.user.participating_projects.all()
+            self.fields["project"].queryset = request.user.owned_projects.all()
+            if request.method in ("PUT", "PATCH"):
+                self.fields["project"].read_only = True
+                self.fields["project"].required = False
         else:
-            self.fields["project"].queryset = Project.objects.none()
+            serializers.ValidationError(
+                "User must be authenticated to create or update a task."
+            )
 
     def validate_due_date(self, value):
-        if value and value < timezone.now():
+        if value and value < timezone.now().date():
             raise serializers.ValidationError("Due date cannot be in the past")
         return value
 
@@ -110,3 +122,4 @@ class TaskSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Assigned user does not belong to the project participants"
             )
+        return data

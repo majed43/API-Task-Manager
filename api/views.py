@@ -61,9 +61,7 @@ class ProjectCBV(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        projects = Project.objects.filter(
-            models.Q(owner=request.user) | models.Q(participants=request.user)
-        ).distinct()
+        projects = Project.objects.filter(participants=request.user).distinct()
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
@@ -107,3 +105,52 @@ class ProjectDetailCBV(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         project.delete()
         return Response({"message": "Project deleted successfully."})
+
+
+class TaskCBV(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tasks = Task.objects.filter(project__participants=request.user).distinct()
+        serializer = TaskSerializer(tasks, many=True, context={"request": request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = TaskSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class TaskDetailCBV(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            task = Task.objects.get(pk=pk, project__participants=request.user)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = TaskSerializer(task, context={"request": request})
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        try:
+            task = Task.objects.get(pk=pk, project__owner=request.user)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = TaskSerializer(
+            task, data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        try:
+            task = Task.objects.get(pk=pk, project__owner=request.user)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        task.delete()
+        return Response({"message": "Task deleted successfully."})
