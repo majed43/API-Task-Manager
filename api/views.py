@@ -1,4 +1,3 @@
-from django.db import models
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -29,29 +28,38 @@ class CategoryDetailCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk):
+    def get_category(self, pk, request):
         try:
-            category = Category.objects.get(pk=pk, owner=request.user)
+            return Category.objects.get(pk=pk, owner=request.user)
         except Category.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return None
+
+    def get(self, request, pk):
+        category = self.get_category(pk, request)
+        if not category:
+            return Response(
+                {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = CategorySerializer(category)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        try:
-            category = Category.objects.get(pk=pk, owner=request.user)
-        except Category.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        category = self.get_category(pk, request)
+        if not category:
+            return Response(
+                {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = CategorySerializer(category, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        try:
-            category = Category.objects.get(pk=pk, owner=request.user)
-        except Category.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        category = self.get_category(pk, request)
+        if not category:
+            return Response(
+                {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         category.delete()
         return Response("message: Category deleted successfully.")
 
@@ -78,19 +86,27 @@ class ProjectDetailCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk):
+    def get_project(self, request, pk):
         try:
-            project = Project.objects.get(owner=request.user, pk=pk)
+            return Project.objects.get(owner=request.user, pk=pk)
         except Project.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return None
+
+    def get(self, request, pk):
+        project = self.get_project(request, pk)
+        if not project:
+            return Response(
+                {"message": "project not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = ProjectSerializer(project)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        try:
-            project = Project.objects.get(owner=request.user, pk=pk)
-        except Project.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        project = self.get_project(request, pk)
+        if not project:
+            return Response(
+                {"message": "project not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = ProjectSerializer(
             project, data=request.data, context={"request": request}
         )
@@ -99,10 +115,11 @@ class ProjectDetailCBV(APIView):
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        try:
-            project = Project.objects.get(owner=request.user, pk=pk)
-        except Project.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        project = self.get_project(request, pk)
+        if not project:
+            return Response(
+                {"message": "project not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         project.delete()
         return Response({"message": "Project deleted successfully."})
 
@@ -127,19 +144,27 @@ class TaskDetailCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk):
+    def get_task(self, pk, request):
         try:
-            task = Task.objects.get(pk=pk, project__participants=request.user)
+            return Task.objects.get(pk=pk, project__participants=request.user)
         except Task.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return None
+
+    def get(self, request, pk):
+        task = self.get_task(pk, request)
+        if not task:
+            return Response(
+                {"message": "task not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = TaskSerializer(task, context={"request": request})
         return Response(serializer.data)
 
     def put(self, request, pk):
-        try:
-            task = Task.objects.get(pk=pk, project__owner=request.user)
-        except Task.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        task = self.get_task(pk, request)
+        if not task:
+            return Response(
+                {"message": "task not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = TaskSerializer(
             task, data=request.data, context={"request": request}
         )
@@ -148,9 +173,10 @@ class TaskDetailCBV(APIView):
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        try:
-            task = Task.objects.get(pk=pk, project__owner=request.user)
-        except Task.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        task = self.get_task(pk, request)
+        if not task:
+            return Response(
+                {"message": "task not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         task.delete()
         return Response({"message": "Task deleted successfully."})
