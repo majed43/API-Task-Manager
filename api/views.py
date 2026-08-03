@@ -27,7 +27,7 @@ class CategoryCBV(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
-        serializer = CategorySerializer(data=request.data)
+        serializer = CategorySerializer(data=request.data, context={"request": request})
         serializer.initial_data["title"] = (
             serializer.initial_data["title"].strip().replace(" ", "-")
         )
@@ -116,8 +116,9 @@ class ProjectDetailCBV(APIView):
             return None
 
     def get(self, request, pk):
-        project = self.get_project(request, pk)
-        if not project:
+        try:
+            project = Project.objects.get(pk=pk, participants=request.user)
+        except Project.DoesNotExist:
             return Response(
                 {"message": "project not found"}, status=status.HTTP_404_NOT_FOUND
             )

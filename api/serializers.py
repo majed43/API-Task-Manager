@@ -28,6 +28,17 @@ class CategorySerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("owner",)
 
+    def validate_title(self, value):
+        request = self.context.get("request")
+        qs = Category.objects.filter(owner=request.user, title=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                "A category with this title already exists for this user."
+            )
+        return value
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.none())
@@ -60,6 +71,17 @@ class ProjectSerializer(serializers.ModelSerializer):
         if request and request.method in ("PUT", "PATCH") and request.user not in value:
             raise serializers.ValidationError(
                 "The owner must be included in the participants list."
+            )
+        return value
+
+    def validate_title(self, value):
+        request = self.context.get("request")
+        qs = Project.objects.filter(owner=request.user, title=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                "A project with this title already exists for this user."
             )
         return value
 

@@ -6,7 +6,7 @@ from django.db import models
 
 class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     hex_color = models.CharField(
         max_length=7,
@@ -27,7 +27,7 @@ class Category(models.Model):
 
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     category = models.ForeignKey(
         Category,
@@ -62,7 +62,7 @@ class Task(models.Model):
         HIGH = "High", "High"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
