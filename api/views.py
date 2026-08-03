@@ -1,3 +1,4 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -8,14 +9,22 @@ from .models import Category, Project, Task
 from .serializers import CategorySerializer, ProjectSerializer, TaskSerializer
 
 
+class Pagination(PageNumberPagination):
+    page_size = 5
+    max_page_size = 20
+
+
 class CategoryCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
 
     def get(self, request):
         categories = Category.objects.filter(owner=request.user)
-        serializer = CategorySerializer(categories, many=True)
-        return Response(serializer.data)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(categories, request, view=self)
+        serializer = CategorySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = CategorySerializer(data=request.data)
@@ -67,11 +76,16 @@ class CategoryDetailCBV(APIView):
 class ProjectCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
 
     def get(self, request):
         projects = Project.objects.filter(participants=request.user).distinct()
-        serializer = ProjectSerializer(projects, many=True)
-        return Response(serializer.data)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(projects, request, view=self)
+
+        serializer = ProjectSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = ProjectSerializer(data=request.data, context={"request": request})
@@ -180,3 +194,25 @@ class TaskDetailCBV(APIView):
             )
         task.delete()
         return Response({"message": "Task deleted successfully."})
+
+
+class TaskByProjectCBV(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
+
+    def get(self, request, slug):
+        slug = slug.replace("-", " ")
+        try:
+            project = Project.objects.get(title=slug, participants=request.user)
+            tasks = Task.objects.filter(
+                project__participants=request.user, project=project
+            )
+        except Project.DoesNotExist:
+            return Response(
+                {"message": "project not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(tasks, request, view=self)
+        serializer = TaskSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)

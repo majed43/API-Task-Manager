@@ -27,7 +27,7 @@ class Category(models.Model):
 
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=100, unique=True)
     description = models.TextField(null=True, blank=True)
     category = models.ForeignKey(
         Category,
@@ -41,10 +41,7 @@ class Project(models.Model):
         editable=False,
     )
     participants = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name="participating_projects",
-        blank=True,
-        null=True,
+        settings.AUTH_USER_MODEL, related_name="participating_projects", blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -65,7 +62,7 @@ class Task(models.Model):
         HIGH = "High", "High"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=100, unique=True)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
