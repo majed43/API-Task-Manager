@@ -1,6 +1,6 @@
-from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -28,6 +28,9 @@ class CategoryCBV(APIView):
 
     def post(self, request):
         serializer = CategorySerializer(data=request.data)
+        serializer.initial_data["title"] = (
+            serializer.initial_data["title"].strip().replace(" ", "-")
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save(owner=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -59,6 +62,9 @@ class CategoryDetailCBV(APIView):
                 {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
             )
         serializer = CategorySerializer(category, data=request.data)
+        serializer.initial_data["title"] = (
+            serializer.initial_data["title"].strip().replace(" ", "-")
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -70,7 +76,7 @@ class CategoryDetailCBV(APIView):
                 {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
             )
         category.delete()
-        return Response("message: Category deleted successfully.")
+        return Response({"message": "Category deleted successfully."})
 
 
 class ProjectCBV(APIView):
@@ -89,6 +95,9 @@ class ProjectCBV(APIView):
 
     def post(self, request):
         serializer = ProjectSerializer(data=request.data, context={"request": request})
+        serializer.initial_data["title"] = (
+            serializer.initial_data["title"].strip().replace(" ", "-")
+        )
         serializer.is_valid(raise_exception=True)
         project = serializer.save(owner=request.user)
         project.participants.add(request.user)
@@ -123,6 +132,9 @@ class ProjectDetailCBV(APIView):
             )
         serializer = ProjectSerializer(
             project, data=request.data, context={"request": request}
+        )
+        serializer.initial_data["title"] = (
+            serializer.initial_data["title"].strip().replace(" ", "-")
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -196,13 +208,12 @@ class TaskDetailCBV(APIView):
         return Response({"message": "Task deleted successfully."})
 
 
-class TaskByProjectCBV(APIView):
+class TasksByProjectCBV(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     pagination_class = Pagination
 
     def get(self, request, slug):
-        slug = slug.replace("-", " ")
         try:
             project = Project.objects.get(title=slug, participants=request.user)
             tasks = Task.objects.filter(
@@ -215,4 +226,25 @@ class TaskByProjectCBV(APIView):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(tasks, request, view=self)
         serializer = TaskSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+class ProjectsByCategoryCBV(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
+
+    def get(self, request, slug):
+        try:
+            category = Category.objects.get(title=slug, owner=request.user)
+            projects = Project.objects.filter(
+                participants=request.user, category=category
+            )
+        except Category.DoesNotExist:
+            return Response(
+                {"message": "category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(projects, request, view=self)
+        serializer = ProjectSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
